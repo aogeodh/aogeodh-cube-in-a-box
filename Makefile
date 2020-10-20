@@ -15,95 +15,6 @@ initdb:
 	docker-compose exec jupyter \
 		datacube -v system init
 
-# 3.a Add a metadata definition for Sentinel-2
-metadata:
-	docker-compose exec jupyter \
-		bash -c "\
-			datacube metadata add /scripts/metadata.eo_plus.yaml ;\
-			datacube metadata add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/eo3_landsat_ard.odc-type.yaml;\
-		"
-
-
-# 3.b Add a product definition for Sentinel-2
-product:
-	docker-compose exec jupyter \
-		bash -c "\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/dea-config/master/products/ga_s2_ard_nbar/ga_s2_ard_nbar_granule.yaml;\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/products-aws/ard_ls8.odc-product.yaml;\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/products-aws/ard_ls7.odc-product.yaml;\
-			datacube product add /scripts/linescan.odc-product.yaml;\
-		"
-
-# 4. Index data
-# Todo: write something that indexes off this: https://explorer.sandbox.dea.ga.gov.au/stac/search?product=ga_s2a_ard_nbar_granule&limit=100&bbox=[140,-40,150,-34]
-index:
-	docker-compose exec jupyter \
-		bash -c "\
-			cat /scripts/s-2-vic-scenes.txt \
-			| s3-to-tar --no-sign-request \
-			| dc-index-from-tar --ignore-lineage ;\
-			cat /scripts/ls7-vic-scenes.txt \
-			| s3-to-tar --no-sign-request \
-			| dc-index-from-tar --ignore-lineage ;\
-			cat /scripts/ls8-vic-scenes.txt \
-			| s3-to-tar --no-sign-request \
-			| dc-index-from-tar --ignore-lineage ;\
-			s3-find s3://dea-public-data/projects/ey-2020-bushfire-challenge/**/*.odc-dataset.json --no-sign-request \
-			| s3-to-tar --no-sign-request \
-			| dc-index-from-tar ;\
-		"
-
-
-index-linescan:
-	docker-compose exec jupyter \
-		bash -c "datacube dataset add /scripts/test_input/*.odc-dataset.json"
-
-# Find Sentinel-2, Landsat 7 and Landsat 8 scenes over Victoria
-# First search for all scenes... careful, this takes a very long time.
-find-s-2-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"s3-find --no-sign-request s3://dea-public-data/L2/sentinel-2-nbar/S2MSIARD_NBAR/**/ARD-METADATA.yaml \
-		 	| gzip > /scripts/s-2-all-scenes.txt.gz"
-
-find-ls7-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"s3-find --no-sign-request s3://dea-public-data/baseline/ga_ls7e_ard_3/**/*.odc-metadata.yaml \
-		 	| gzip > /scripts/ls7-all-scenes.txt.gz"
-
-find-ls8-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"s3-find --no-sign-request s3://dea-public-data/baseline/ga_ls8c_ard_3/**/*.odc-metadata.yaml \
-		 	| gzip > /scripts/ls8-all-scenes.txt.gz"
-
-# Next extract the area of interest using pathrows or MGRS tiles and dates
-scripts/dates.txt:
-	./make_dates.sh > ./scripts/dates.txt
-
-filter-s-2-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"gunzip -c /scripts/s-2-all-scenes.txt.gz \
-			| grep -f /scripts/vic-tiles-s-2.txt \
-			| grep -f /scripts/dates.txt > /scripts/s-2-vic-scenes.txt"
-
-filter-ls7-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"gunzip -c /scripts/ls7-all-scenes.txt.gz \
-			| grep -f /scripts/vic-tiles-ls.txt \
-			| grep -f /scripts/dates.txt > /scripts/ls7-vic-scenes.txt"
-
-filter-ls8-documents:
-	docker-compose exec jupyter \
-		bash -c \
-			"gunzip -c /scripts/ls8-all-scenes.txt.gz \
-			| grep -f /scripts/vic-tiles-ls.txt \
-			| grep -f /scripts/dates.txt > /scripts/ls8-vic-scenes.txt"
-
-# Some extra commands to help in managing things.
 # Rebuild the image
 build:
 	docker-compose build
@@ -111,31 +22,6 @@ build:
 # Start an interactive shell
 shell:
 	docker-compose exec jupyter bash
-
-# OTHER
-metadata-landsat:
-	docker-compose exec jupyter \
-		datacube metadata add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/eo3_landsat_ard.odc-type.yaml
-
-product-landsat:
-	docker-compose exec jupyter \
-		bash -c "\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/products-aws/ard_ls5.odc-product.yaml;\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/products-aws/ard_ls7.odc-product.yaml;\
-			datacube product add https://raw.githubusercontent.com/GeoscienceAustralia/digitalearthau/develop/digitalearthau/config/eo3/products-aws/ard_ls8.odc-product.yaml;"
-
-
-index-landsat:
-	docker-compose exec jupyter \
-		bash -c "\
-			s3-find --no-sign-request "s3://dea-public-data-dev/analysis-ready-data/ga_ls8c_ard_3/**/*.odc-metadata.yaml"\
-			| s3-to-tar --no-sign-request | dc-index-from-tar --product ga_ls8c_ard_3 --ignore-lineage"
-
-index-landsat-one:
-	docker-compose exec jupyter \
-		datacube dataset add --ignore-lineage --confirm-ignore-lineage \
-		https://dea-public-data-dev.s3-ap-southeast-2.amazonaws.com/analysis-ready-data/ga_ls8c_ard_3/115/074/2013/05/20/ga_ls8c_ard_3-0-0_115074_2013-05-20_final.proc-info.yaml
-
 
 # CLOUD FORMATION
 # Update S3 template (this is owned by Digital Earth Australia)
