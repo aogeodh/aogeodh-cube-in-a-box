@@ -26,7 +26,7 @@ shell:
 # CLOUD FORMATION
 # Update S3 template (this is owned by Digital Earth Australia)
 upload-s3:
-	aws s3 cp cube-in-a-box-dea-cloudformation.yml s3://opendatacube-cube-in-a-box/ --acl public-read
+	aws s3 cp cube-in-a-box-aogeodh-cloudformation.yml s3://opendatacube-cube-in-a-box/ --acl public-read
 
 # This section can be used to deploy onto CloudFormation instead of the 'magic link'
 create-infra:
