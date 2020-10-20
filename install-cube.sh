@@ -28,9 +28,9 @@ apt-get update && apt-get install -y docker-ce python3-pip unzip wget
 pip3 install docker-compose
 
 # Get our code
-wget https://github.com/EY-Data-Science-Program/2020-bushfire-challenge/archive/main.zip -O /tmp/archive.zip
+wget https://github.com/aogeodh/aogeodh-cube-in-a-box/archive/main.zip -O /tmp/archive.zip
 unzip /tmp/archive.zip
-mv 2020-bushfire-challenge-main /opt/odc
+mv aogeodh-cube-in-a-box /opt/odc
 
 # We need to change some local vars.
 sed --in-place "s/secretpassword/${PASSWORD}/g" /opt/odc/docker-compose.yml
